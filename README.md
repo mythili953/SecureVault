@@ -24,7 +24,7 @@ pip install -r requirements.txt
 
 3. Run the application:
 ```bash
-python main.py
+python app.py
 ```
 ```
 
@@ -34,14 +34,3 @@ python main.py
 2. **Face Recognition**: Start real-time face recognition
 3. **Authenticate User**: Verify a specific user's identity
 4. **List Users**: View all registered users
-
-## Files Structure
-
-```
-    SecureVault/
-    ├── main.py              # Main application entry
-    ├── src/
-    │   └── face_recognition_system.py  # Core face recognition logic
-    ├── data/                # Generated data files (face_data.pkl, face_model.xml)
-    ├── requirements.txt     # Dependencies
-```
