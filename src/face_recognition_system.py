@@ -56,41 +56,70 @@ class FaceRecognitionSystem:
         """Register a new face"""
         cap = cv2.VideoCapture(0)
         print(f"Registering face for: {name}")
-        print("Press SPACE to capture face samples, ESC to finish")
+        print("Position yourself in front of the camera. Auto-capture will start in 3 seconds...")
+        print("Press ESC to cancel registration")
         
         user_id = len(self.face_data) + 1
         face_samples = []
         sample_count = 0
-        max_samples = 20
+        max_samples = 50  # Increased from 20 to 50
+        
+        # Wait 3 seconds before starting auto-capture
+        start_time = cv2.getTickCount()
+        capture_started = False
+        last_capture_time = 0
+        capture_interval = 0.3  # Capture every 300ms (0.3 seconds)
         
         while sample_count < max_samples:
             ret, frame = cap.read()
             if not ret:
                 break
             
+            current_time = cv2.getTickCount()
+            elapsed_time = (current_time - start_time) / cv2.getTickFrequency()
+            
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
+            
+            # Start capturing after 3 seconds
+            if elapsed_time > 3.0:
+                capture_started = True
             
             for (x, y, w, h) in faces:
                 cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
                 
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord(' '):  # Space to capture
+                # Auto-capture if enough time has passed and capture has started
+                if capture_started and (elapsed_time - last_capture_time) >= capture_interval:
                     face_roi = gray[y:y+h, x:x+w]
                     face_roi = cv2.resize(face_roi, (200, 200))
                     face_samples.append(face_roi)
                     sample_count += 1
-                    print(f"Captured sample {sample_count}/{max_samples}")
+                    last_capture_time = elapsed_time
+                    print(f"Auto-captured sample {sample_count}/{max_samples}")
+                    
+                    # Visual feedback for capture
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 4)
             
-            # Show progress
-            cv2.putText(frame, f"Samples: {sample_count}/{max_samples}", (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(frame, "Press SPACE to capture", (10, 70), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            # Show status messages
+            if not capture_started:
+                countdown = int(4 - elapsed_time)
+                cv2.putText(frame, f"Starting in {countdown}...", (10, 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            else:
+                cv2.putText(frame, f"Samples: {sample_count}/{max_samples}", (10, 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(frame, "Auto-capturing...", (10, 70), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                
+                # Progress bar
+                progress = int((sample_count / max_samples) * 400)
+                cv2.rectangle(frame, (10, 100), (410, 130), (0, 0, 0), 2)
+                cv2.rectangle(frame, (12, 102), (12 + progress, 128), (0, 255, 0), -1)
             
-            cv2.imshow('Register Face', frame)
+            cv2.imshow('Register Face - Auto Capture', frame)
             
-            if cv2.waitKey(1) & 0xFF == 27:  # ESC to exit
+            if cv2.waitKey(1) & 0xFF == 27:  # ESC to cancel
+                print("Registration cancelled")
                 break
         
         if face_samples:
@@ -99,7 +128,7 @@ class FaceRecognitionSystem:
                 'faces': face_samples
             }
             self.save_face_data()
-            print(f"Registration complete for {name}!")
+            print(f"Registration complete for {name}! Captured {len(face_samples)} samples.")
         else:
             print("No face samples captured")
         
