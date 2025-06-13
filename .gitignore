@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data files
+data/
+*.pkl
+*.xml
+
+# Virtual environment
+.SecureVault-venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
