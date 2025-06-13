@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SecureVault - Face Recognition</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .button { 
+            padding: 15px 30px; 
+            margin: 10px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            text-decoration: none;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .button:hover { background-color: #0056b3; }
+        #userList { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>SecureVault - Face Recognition System</h1>
+    <div>
+        <a href="/register" class="button">Register New Face</a>
+        <a href="/authenticate" class="button">Authenticate Face</a>
+        <button onclick="listUsers()" class="button">List Registered Users</button>
+    </div>
+    <div id="userList"></div>
+
+    <script>
+        function listUsers() {
+            fetch('/list_users')
+                .then(response => response.json())
+                .then(data => {
+                    const userList = document.getElementById('userList');
+                    if (data.success && data.users.length > 0) {
+                        userList.innerHTML = '<h3>Registered Users:</h3>';
+                        data.users.forEach(user => {
+                            userList.innerHTML += `<p><strong>${user.name}</strong> (ID: ${user.id}, Images: ${user.face_count})</p>`;
+                        });
+                    } else {
+                        userList.innerHTML = '<p>No users registered yet.</p>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('userList').innerHTML = '<p>Error loading users.</p>';
+                });
+        }
+    </script>
+</body>
+</html>
