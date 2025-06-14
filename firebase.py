@@ -115,5 +115,29 @@ def download_file_direct(item_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/users', methods=['POST'])
+def add_user():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        required_fields = ['username', 'userid', 'public_key']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        user_data = {
+            'username': data['username'],
+            'userid': data['userid'],
+            'public_key': data['public_key']
+        }
+        
+        result = db.child("users").push(user_data)
+        
+        return jsonify({"message": "User added successfully", "id": result['name']})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
