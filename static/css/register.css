@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@100..900&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            overscroll-behavior: none;
+          }
+
+        body {
+            font-family: "Onest", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            padding: 20px;
+            
+
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #382b96;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight:bold;
+        }
+
+        #nameInput {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px 20px;
+            margin: 20px auto;
+            margin-bottom: 0px;
+            border: 2px solid #aed1ea;
+            border-radius: 50px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #ffffff;
+            display: block;
+        }
+
+        #nameInput:focus {
+            outline: none;
+            border-color: #7d91eb;
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        .button {
+            background: #7d91eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+
+        .button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(-1px);
+        }
+
+        .button:disabled {
+            background: #989eba;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #status {
+            margin: 25px 0;
+            font-weight: 600;
+            font-size: 18px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(116, 75, 162, 0.1);
+            color: #764ba2;
+        }
+
+        #videoContainer {
+            margin: 20px auto;
+            position: relative;
+            display: block;
+            border-radius: 15px;
+            overflow: hidden;
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 4/3;
+            background: url('../images/cameraoff.jpg') center center/cover no-repeat;
+            background-size: 50%;
+            background-color: #cac6c5;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 15px;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .progress {
+            width: 100%;
+            max-width: 400px;
+            height: 8px;
+            background: rgba(230, 230, 230, 0.8);
+            margin: 20px auto;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .success {
+            color: #27ae60 !important;
+            background: rgba(39, 174, 96, 0.1) !important;
+            border-left-color: #27ae60 !important;
+        }
+
+        .error {
+            color: #e74c3c !important;
+            background: rgba(231, 76, 60, 0.1) !important;
+            border-left-color: #e74c3c !important;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            #video {
+                max-width: 100%;
+            }
+
+            .button {
+                padding: 12px 25px;
+                font-size: 14px;
+                margin: 8px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
