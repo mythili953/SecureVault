@@ -9,6 +9,11 @@ import os
 import pyrebase
 import mimetypes
 import json
+import cv2
+import numpy as np
+import base64
+import random
+import string
 
 load_dotenv()
 
@@ -199,7 +204,7 @@ def authenticate_face():
         
         if not image_data:
             return jsonify({'success': False, 'message': 'Image is required'})
-    
+
         if ',' in image_data:
             encoded = image_data.split(",", 1)[1]
         else:
@@ -221,7 +226,7 @@ def authenticate_face():
                 'user': {
                     'name': str(result['name']),
                     'confidence': float(result['confidence']),
-                    'confidence_percent': float(result['confidence_percent']),
+                    'confidence_percent': float(result.get('confidence_percent', 0)),  # Use .get() with default
                     'user_id': int(result['user_id'])
                 }
             })
@@ -358,6 +363,20 @@ def get_users():
                 })
             return jsonify(user_list)
         return jsonify([])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/users/face/<user_name>', methods=['DELETE'])
+def delete_face_user(user_name):
+    try:
+        # Delete from face recognition system
+        success = face_system.delete_user(user_name)
+        
+        if success:
+            return jsonify({"message": f"User {user_name} deleted successfully"})
+        else:
+            return jsonify({"error": "User not found"}), 404
+            
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

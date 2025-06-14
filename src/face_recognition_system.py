@@ -105,16 +105,19 @@ class FaceRecognitionSystem:
             
             label, confidence = self.recognizer.predict(face_roi)
             
-            if confidence > 50:  
+            if confidence < 60:  # Lower confidence means better match in OpenCV
                 for user_id, data in self.face_data.items():
                     if user_id == label:
+                        # Calculate confidence percentage (invert since lower is better)
+                        confidence_percent = max(0, 100 - confidence)
                         print(f"Face recognized: {data['name']} (confidence: {confidence:.2f})")
                         return {
                             'name': data['name'],
                             'confidence': confidence,
+                            'confidence_percent': confidence_percent,  # Add this line
                             'user_id': user_id
                         }
-            
+        
             print(f"Face not recognized (confidence: {confidence:.2f})")
             return None
             
@@ -157,51 +160,3 @@ class FaceRecognitionSystem:
         except Exception as e:
             print(f"Error during registration: {e}")
             return False
-
-    def authenticate_face_from_image(self, image):
-        try:
-            if image is None:
-                print("No image provided")
-                return None
-            
-            if len(image.shape) == 3:
-                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            else:
-                gray = image
-            
-            faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
-            
-            if len(faces) == 0:
-                print("No face found in the image")
-                return None
-            
-            largest_face = max(faces, key=lambda f: f[2] * f[3])
-            (x, y, w, h) = largest_face
-            
-            face_roi = gray[y:y+h, x:x+w]
-            face_roi = cv2.resize(face_roi, (200, 200))
-            
-            if not self.model_file.exists() or len(self.face_data) == 0:
-                print("No trained model found. Please register faces first.")
-                return None
-            
-            label, confidence = self.recognizer.predict(face_roi)
-            
-            if confidence < 100:
-                for user_id, data in self.face_data.items():
-                    if user_id == label:
-                        confidence_percent = round(100 - confidence, 2)
-                        print(f"Face recognized: {data['name']} (confidence: {confidence_percent}%)")
-                        return {
-                            'name': str(data['name']),  
-                            'confidence': float(confidence), 
-                            'confidence_percent': float(confidence_percent),  
-                            'user_id': int(user_id) 
-                        }
-            
-            print(f"Face not recognized (confidence: {round(100-confidence, 2)}%)")
-            return None
-            
-        except Exception as e:
-            print(f"Error during authentication: {e}")
-            return None

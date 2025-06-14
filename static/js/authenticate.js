@@ -49,8 +49,7 @@ function authenticateFace() {
     .then(data => {
         if (data.success) {
             document.getElementById('status').innerHTML = `<span class="success"> ${data.message}</span>`;
-            
-            // Redirect to vault page with user info
+
             setTimeout(() => {
                 window.location.href = `/vault?user=${encodeURIComponent(data.user.name)}`;
             }, 1500);
