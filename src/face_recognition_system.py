@@ -105,7 +105,7 @@ class FaceRecognitionSystem:
             
             label, confidence = self.recognizer.predict(face_roi)
             
-            if confidence < 100:  
+            if confidence > 50:  
                 for user_id, data in self.face_data.items():
                     if user_id == label:
                         print(f"Face recognized: {data['name']} (confidence: {confidence:.2f})")

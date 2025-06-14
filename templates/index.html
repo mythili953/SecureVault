@@ -1,53 +1,199 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureVault - Face Recognition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        .button { 
-            padding: 15px 30px; 
-            margin: 10px; 
-            font-size: 16px; 
-            cursor: pointer; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #2c3e50;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+        
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        
+        .button {
+            padding: 15px 30px;
+            font-size: 1em;
+            cursor: pointer;
             text-decoration: none;
-            background-color: #007bff;
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
             color: white;
             border: none;
-            border-radius: 5px;
-            display: inline-block;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
         }
-        .button:hover { background-color: #0056b3; }
-        #userList { margin-top: 20px; }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, #182848 0%, #4b6cb7 100%);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        #userList {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        #userList.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .user-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .user-card:hover {
+            transform: translateX(5px);
+            background: #f1f3f5;
+        }
+        
+        .user-info {
+            flex-grow: 1;
+        }
+        
+        .user-name {
+            font-weight: 500;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .user-details {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .no-users {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .button-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .button {
+                width: 100%;
+                max-width: 300px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+        }
     </style>
 </head>
+
 <body>
-    <h1>SecureVault - Face Recognition System</h1>
-    <div>
-        <a href="/register" class="button">Register New Face</a>
-        <a href="/authenticate" class="button">Authenticate Face</a>
-        <button onclick="listUsers()" class="button">List Registered Users</button>
+    <div class="container">
+        <div class="header">
+            <h1>SecureVault</h1>
+            <p class="subtitle">Advanced Face Recognition System</p>
+        </div>
+
+        <div class="button-container">
+            <a href="/register" class="button">Register New Face</a>
+            <a href="/authenticate" class="button">Authenticate Face</a>
+            <button onclick="listUsers()" class="button">List Registered Users</button>
+        </div>
+
+        <div id="userList"></div>
     </div>
-    <div id="userList"></div>
 
     <script>
         function listUsers() {
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '<div class="no-users">Loading users...</div>';
+            userList.classList.add('visible');
+
             fetch('/list_users')
                 .then(response => response.json())
                 .then(data => {
-                    const userList = document.getElementById('userList');
                     if (data.success && data.users.length > 0) {
-                        userList.innerHTML = '<h3>Registered Users:</h3>';
+                        userList.innerHTML = '<h3 style="margin-bottom: 20px; color: #2c3e50;">Registered Users</h3>';
                         data.users.forEach(user => {
-                            userList.innerHTML += `<p><strong>${user.name}</strong> (ID: ${user.id}, Images: ${user.face_count})</p>`;
+                            userList.innerHTML += `
+                                <div class="user-card">
+                                    <div class="user-info">
+                                        <div class="user-name">${user.name}</div>
+                                        <div class="user-details">ID: ${user.id} • Images: ${user.face_count}</div>
+                                    </div>
+                                </div>`;
                         });
                     } else {
-                        userList.innerHTML = '<p>No users registered yet.</p>';
+                        userList.innerHTML = '<div class="no-users">No users registered yet.</div>';
                     }
                 })
                 .catch(error => {
-                    document.getElementById('userList').innerHTML = '<p>Error loading users.</p>';
+                    userList.innerHTML = '<div class="no-users">Error loading users. Please try again.</div>';
                 });
         }
     </script>
 </body>
+
 </html>
