@@ -1,17 +1,14 @@
 from flask import Flask, request, render_template, jsonify, Response
-import base64
-import cv2
-import numpy as np
 from src.face_recognition_system import FaceRecognitionSystem
 from collections import defaultdict
 from src.encryption import key_manager
-import string
-import random
-import pyrebase
-import os
 from dotenv import load_dotenv
-import mimetypes
 from datetime import datetime
+from src.encryption.web_crypto_utils import encrypt_file_for_users, decrypt_file_for_user, get_current_user_id
+import os
+import pyrebase
+import mimetypes
+import json
 
 load_dotenv()
 
@@ -42,6 +39,14 @@ def index():
 @app.route('/register')
 def register():
     return render_template("register.html")
+
+@app.route('/vault')
+def vault():
+    return render_template("vault.html")
+
+@app.route('/authenticate')
+def authenticate():
+    return render_template("authenticate.html")
 
 @app.route('/upload_captured_images', methods=['POST'])
 def upload_captured_images():
@@ -168,10 +173,6 @@ def get_capture_status(name):
     count = len(image_buffer.get(name, []))
     return jsonify({'images_captured': count, 'total_needed': 50})
 
-@app.route('/authenticate')
-def authenticate():
-    return render_template("authenticate.html")
-
 @app.route('/list_users')
 def list_users():
     """Get list of registered users"""
@@ -238,15 +239,13 @@ def authenticate_face():
 @app.route('/api/vault', methods=['GET'])
 def get_vault_items():
     try:
-        items = db.child("vault").get()  
+        items = db.child("vault").get()
         if items.val():
-            vault_items = []
-            for key, value in items.val().items():
-                vault_items.append({
-                    'id': key,
-                    **value
-                })
-            return jsonify(vault_items)
+            vault_list = []
+            for key, item in items.val().items():
+                item['id'] = key
+                vault_list.append(item)
+            return jsonify(vault_list)
         return jsonify([])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -254,40 +253,41 @@ def get_vault_items():
 @app.route('/api/vault', methods=['POST'])
 def add_vault_item():
     try:
-        print("POST request received") 
-        data = {}
-        if request.is_json:
-            data = request.json
-        elif request.form or request.files:
-            data = request.form.to_dict()
-        else:
-            print("No JSON or form data found")
+        print("POST request received")
         
+        # Get form data
+        data = request.form.to_dict()
         file = request.files.get('file')
-        if file:
-            file_content = file.read()
-            file_base64 = base64.b64encode(file_content).decode('utf-8')
-            
-            file_extension = file.filename.split('.')[-1].lower() if '.' in file.filename else 'unknown'
-            mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
-            
-            data['file_name'] = file.filename
-            data['file_extension'] = file_extension
-            data['file_type'] = mime_type
-            data['file_size'] = len(file_content)
-            data['file_content'] = file_base64
-            data['title'] = file.filename if not data.get('title') else data['title']
-            data['uploaded_at'] = datetime.now().isoformat()
-            
-            print(f"File info - Name: {file.filename}, Type: {mime_type}, Size: {len(file_content)} bytes")
         
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
+        if not file:
+            return jsonify({"error": "No file provided"}), 400
         
-        result = db.child("vault").push(data)
+        # Read file content and encode as base64
+        file_content = file.read()
+        import base64
+        encoded_content = base64.b64encode(file_content).decode('utf-8')
         
-        return jsonify({"message": "Item added successfully", "id": result['name']})
+        # Get file info
+        file_extension = file.filename.split('.')[-1].lower() if '.' in file.filename else 'unknown'
+        mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
+        
+        vault_data = {
+            'title': data.get('title', file.filename),
+            'file_name': file.filename,
+            'file_content': encoded_content,
+            'file_extension': file_extension,
+            'file_type': mime_type,
+            'file_size': len(file_content),
+            'uploaded_at': datetime.now().isoformat()
+        }
+        
+        # Store in Firebase
+        result = db.child("vault").push(vault_data)
+        
+        return jsonify({"message": "File uploaded successfully", "id": result['name']})
+        
     except Exception as e:
+        print(f"Error in add_vault_item: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/vault/<item_id>', methods=['DELETE'])
@@ -303,22 +303,18 @@ def download_file_direct(item_id):
     try:
         item = db.child("vault").child(item_id).get()
         if not item.val():
-            return jsonify({"error": "Item not found"}), 404
+            return jsonify({"error": "File not found"}), 404
         
         item_data = item.val()
         
-        if 'file_content' not in item_data:
-            return jsonify({"error": "No file content found"}), 404
-        
+        # Decode base64 content
+        import base64
         file_content = base64.b64decode(item_data['file_content'])
         
         return Response(
             file_content,
             mimetype=item_data.get('file_type', 'application/octet-stream'),
-            headers={
-                "Content-Disposition": f"attachment; filename={item_data.get('file_name', 'download')}"
-            }
-        )
+            headers={"Content-Disposition": f"attachment; filename={item_data.get('file_name', 'download')}"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -326,34 +322,25 @@ def download_file_direct(item_id):
 def add_user():
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
         
-        required_fields = ['username', 'userid', 'public_key']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
+        # Generate key pair for the user
+        key_pair = key_manager.generate_key_pair()
         
-        # Handle public_key if it's in bytes format
-        public_key = data['public_key']
-        if isinstance(public_key, bytes):
-            public_key = public_key.decode('utf-8')
-        elif isinstance(public_key, str) and public_key.startswith("b'"):
-            # Handle string representation of bytes
-            public_key = public_key[2:-1]  # Remove b' and '
+        # Store public key in Firebase, private key locally
+        public_key_pem = key_manager.serialize_public_key(key_pair['public_key'])
+        key_manager.store_private_key(data['userid'], key_pair['private_key'])
         
         user_data = {
             'username': data['username'],
             'userid': data['userid'],
-            'public_key': public_key,
+            'public_key': public_key_pem,
             'created_at': datetime.now().isoformat()
         }
         
         result = db.child("users").push(user_data)
+        return jsonify({"message": "User created successfully", "id": result['name']})
         
-        return jsonify({"message": "User added successfully", "id": result['name']})
     except Exception as e:
-        print(f"Firebase error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/users', methods=['GET'])
@@ -362,14 +349,134 @@ def get_users():
         users = db.child("users").get()
         if users.val():
             user_list = []
-            for key, value in users.val().items():
+            for key, user_data in users.val().items():
                 user_list.append({
                     'id': key,
-                    **value
+                    'username': user_data.get('username'),
+                    'userid': user_data.get('userid'),
+                    'created_at': user_data.get('created_at')
                 })
             return jsonify(user_list)
         return jsonify([])
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vault/encrypted', methods=['POST'])
+def add_encrypted_vault_item():
+    try:
+        print("Encrypted POST request received")
+        
+        # Get form data
+        data = request.form.to_dict()
+        file = request.files.get('file')
+        recipients_json = request.form.get('recipients')
+        
+        if not file:
+            return jsonify({"error": "No file provided"}), 400
+            
+        if not recipients_json:
+            return jsonify({"error": "No recipients specified"}), 400
+        
+        # Parse recipients
+        try:
+            recipients = json.loads(recipients_json)
+        except:
+            return jsonify({"error": "Invalid recipients format"}), 400
+        
+        # Get current user ID
+        current_username = data.get('current_user')
+        if not current_username:
+            return jsonify({"error": "Current user not identified"}), 400
+            
+        sender_user_id = get_current_user_id(current_username)
+        if not sender_user_id:
+            return jsonify({"error": "Sender user ID not found"}), 400
+        
+        # Read file content
+        file_content = file.read()
+        
+        # Get recipient user IDs
+        recipient_user_ids = [r['userid'] for r in recipients]
+        
+        # Encrypt file for all recipients
+        encrypted_data = encrypt_file_for_users(file_content, sender_user_id, recipient_user_ids)
+        
+        # Prepare data for storage
+        file_extension = file.filename.split('.')[-1].lower() if '.' in file.filename else 'unknown'
+        mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
+        
+        vault_data = {
+            'title': data.get('title', file.filename),
+            'file_name': file.filename,
+            'file_extension': file_extension,
+            'file_type': mime_type,
+            'file_size': len(file_content),
+            'uploaded_at': datetime.now().isoformat(),
+            'sender_id': sender_user_id,
+            'sender_username': current_username,
+            'recipients': recipients,
+            'is_encrypted': True,
+            'encrypted_data': encrypted_data
+        }
+        
+        # Store in Firebase
+        result = db.child("vault").push(vault_data)
+        
+        return jsonify({
+            "message": "Encrypted file uploaded successfully", 
+            "id": result['name'],
+            "recipients": len(recipients)
+        })
+        
+    except Exception as e:
+        print(f"Encryption upload error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vault/<item_id>/decrypt', methods=['POST'])
+def decrypt_vault_item(item_id):
+    try:
+        # Get current user info
+        current_username = request.json.get('current_user') if request.is_json else None
+        
+        if not current_username:
+            current_username = request.args.get('user')
+        
+        if not current_username:
+            return jsonify({"error": "Current user not identified"}), 400
+        
+        current_user_id = get_current_user_id(current_username)
+        if not current_user_id:
+            return jsonify({"error": "User ID not found"}), 400
+        
+        # Get file from Firebase
+        item = db.child("vault").child(item_id).get()
+        if not item.val():
+            return jsonify({"error": "File not found"}), 404
+        
+        item_data = item.val()
+        
+        if not item_data.get('is_encrypted'):
+            return jsonify({"error": "File is not encrypted"}), 400
+        
+        # Check if user has permission to decrypt
+        encrypted_data = item_data.get('encrypted_data', {})
+        if current_user_id not in encrypted_data.get('encrypted_keys', {}):
+            return jsonify({"error": "You don't have permission to decrypt this file"}), 403
+        
+        # Decrypt file
+        decrypted_content = decrypt_file_for_user(encrypted_data, current_user_id)
+        
+        # Return decrypted file
+        return Response(
+            decrypted_content,
+            mimetype=item_data.get('file_type', 'application/octet-stream'),
+            headers={
+                "Content-Disposition": f"attachment; filename={item_data.get('file_name', 'decrypted_file')}"
+            }
+        )
+        
+    except Exception as e:
+        print(f"Decryption error: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

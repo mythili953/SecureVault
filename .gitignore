@@ -3,6 +3,7 @@ secure/
 venv/
 env/
 .env/
+.SecureVault-venv/
 
 # Python
 __pycache__/
@@ -40,3 +41,5 @@ Thumbs.db
 data/
 *.pkl
 *.xml
+
+.env
